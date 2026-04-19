@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthcareEconomics-VitalThreatDetection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo">Health Guard AI</div>
+            <div class="nav-links">
+                <button onclick="location.href='/'">Monitor</button>
+                <button onclick="location.href='/dashboard'">System Dashboard</button>
+            </div>
+        </nav>
+
+        <section class="hero">
+            <h1>Health Care Alert System</h1>
+            <p>Predicting health safety via  IoT ,AI smartwatch streams with 97% accuracy.</p>
+        </section>
+
+        <main class="glass-card" style="max-width: 600px; margin: 0 auto;">
+            <div class="input-grid">
+                <div class="input-group">
+                    <label>Heart Rate (BPM)</label>
+                    <input type="number" id="heart_rate" placeholder="e.g. 72" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>SpO2 (%)</label>
+                    <input type="number" id="spo2" placeholder="e.g. 98" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Body Temp (°C)</label>
+                    <input type="number" id="temperature" placeholder="e.g. 36.6" step="0.1">
+                </div>
+                <div class="input-group">
+                    <label>Daily Steps</label>
+                    <input type="number" id="steps" placeholder="e.g. 5000">
+                </div>
+            </div>
+            <button class="btn-predict" onclick="predict()">Analyze Health Care</button>
+
+            <div id="result-area" class="result-area">
+                <div id="alert-box" class="alert"></div>
+                <div id="toast-alert" class="toast-alert"> 
+                    &#9888; Health Risk Detected! Please check immediately!
+    </div>
+</div>
+
+    <script>
+        async function predict() {
+            const data = {
+                heart_rate: document.getElementById('heart_rate').value,
+                spo2: document.getElementById('spo2').value,
+                temperature: document.getElementById('temperature').value,
+                steps: document.getElementById('steps').value
+            };
+
+            if (!data.heart_rate || !data.spo2 || !data.temperature || !data.steps) {
+                alert("Please fill all fields");
+                return;
+            }
+
+            const res = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            const resultArea = document.getElementById('result-area');
+            const alertBox = document.getElementById('alert-box');
+
+            resultArea.style.display = 'block';
+            alertBox.textContent = `Detection Status: ${result.result}`;
+            alertBox.className = `alert ${result.alert_class}`;
+            if (result.result && result.result.includes("Health Risk")) {
+                const toast = document.getElementById("toast-alert");
+                toast.style.display = "block";
+                setTimeout(() => {
+                    toast.style.display = "none";
+                }, 4000);
+}
+        }
+    </script>
+</body>
+</html>

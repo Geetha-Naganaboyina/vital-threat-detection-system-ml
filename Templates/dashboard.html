@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthcareEconomics-VitalThreatDetection System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <nav>
+            <div class="logo">Health Guard AI</div>
+            <div class="nav-links">
+                <button onclick="location.href='/'">Monitor</button>
+                <button onclick="location.href='/dashboard'">System Dashboard</button>
+            </div>
+        </nav>
+
+        <h2 style="margin-bottom: 2rem; font-size: 2.5rem; text-align: center;">System Analytics</h2>
+
+        <div class="dashboard-btns">
+            <button id="btn-acc" onclick="showChart('accuracy')">Accuracy Graph</button>
+            <button id="btn-f1" onclick="showChart('f1')">F1 & Recall</button>
+            <button id="btn-data" onclick="showChart('dataset')">Dataset Details</button>
+        </div>
+
+        <div class="glass-card">
+            <div id="chart-area" class="chart-container" style="display: block;">
+                <canvas id="myChart"></canvas>
+            </div>
+
+            <div id="stats-summary" class="dashboard-grid" style="margin-top: 2rem;">
+                <div class="glass-card stat-card">
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">Overall System Accuracy</p>
+                    <div class="stat-value">{{ (metrics.accuracy * 100)|round(2) }}%</div>
+                </div>
+                <div class="glass-card stat-card">
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">Safe Samples</p>
+                    <div class="stat-value" style="color: var(--success);">{{ metrics.safe_samples }}</div>
+                </div>
+                <div class="glass-card stat-card">
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 0.5rem;">Not Safe Samples</p>
+                    <div class="stat-value" style="color: var(--danger);">{{ metrics.not_safe_samples }}</div>
+                </div>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 3rem; margin-bottom: 1.5rem; font-size: 2rem; text-align: center;">Prediction History</h2>
+        <div class="glass-card" style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+                        <th style="padding: 1rem; color: #94a3b8;">Time</th>
+                        <th style="padding: 1rem; color: #94a3b8;">Heart Rate</th>
+                        <th style="padding: 1rem; color: #94a3b8;">SpO2 (%)</th>
+                        <th style="padding: 1rem; color: #94a3b8;">Temperature (°C)</th>
+                        <th style="padding: 1rem; color: #94a3b8;">Steps</th>
+                        <th style="padding: 1rem; color: #94a3b8;">Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entry in history %}
+                    <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05); transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.05)'" onmouseout="this.style.backgroundColor='transparent'">
+                        <td style="padding: 1rem;">{{ entry.timestamp }}</td>
+                        <td style="padding: 1rem;">{{ entry.heart_rate }}</td>
+                        <td style="padding: 1rem;">{{ entry.spo2 }}</td>
+                        <td style="padding: 1rem;">{{ entry.temperature }}</td>
+                        <td style="padding: 1rem;">{{ entry.steps }}</td>
+                        <td style="padding: 1rem; font-weight: bold; color: {{ 'var(--danger)' if entry.result == 'Not Safe' else 'var(--success)' }}">{{ entry.result }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="padding: 2rem; text-align: center; color: #94a3b8;">No predictions made yet. Make a <a href="/" style="color: #6366f1; text-decoration: none;">prediction</a> to see it here.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+        const metrics = {{ metrics| tojson }};
+
+        function showChart(type) {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            const btns = document.querySelectorAll('.dashboard-btns button');
+            btns.forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${type.substring(0, 3)}`).classList.add('active');
+
+            if (myChart) myChart.destroy();
+
+            let data, options;
+
+            if (type === 'accuracy') {
+                data = {
+                    labels: ['Model Accuracy'],
+                    datasets: [{
+                        label: 'Accuracy %',
+                        data: [metrics.accuracy * 100],
+                        backgroundColor: ['#6366f1']
+                    }]
+                };
+            } else if (type === 'f1') {
+                data = {
+                    labels: ['F1 Score', 'Recall'],
+                    datasets: [{
+                        label: 'Performance Score',
+                        data: [metrics.f1_score, metrics.recall],
+                        backgroundColor: ['#10b981', '#f59e0b']
+                    }]
+                };
+            } else if (type === 'dataset') {
+                data = {
+                    labels: ['Safe Samples', 'Risk Samples'],
+                    datasets: [{
+                        label: 'Dataset Distribution',
+                        data: [metrics.safe_samples, metrics.not_safe_samples],
+                        backgroundColor: ['#22c55e', '#ef4444'],
+                        borderWidth: 2
+                    }]
+                };
+                type = 'doughnut';
+}
+
+            myChart = new Chart(ctx, {
+                type: type === 'pie' ? 'doughnut' : 'bar',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: 'white' } }
+                    }
+                }
+            });
+        }
+
+        // Initialize with accuracy
+        window.onload = () => showChart('accuracy');
+    </script>
+</body>
+
+</html>
